@@ -17,6 +17,11 @@ extern uint16_t compare;
 /* Game Variables */
 extern uint8_t car_row, car_col;
 extern uint8_t map[8];
+uint8_t gen_state;
+uint8_t road_head;
+uint8_t chase_head;
+
+/* Game Over */
 extern uint8_t store[8];
 extern const  uint8_t letter[10][8] PROGMEM;
 /************************************************************************
@@ -24,33 +29,59 @@ extern const  uint8_t letter[10][8] PROGMEM;
  */
 void LoadGame		( void )
 {
-	for( uint8_t i = 0; i < 8; i++ ){						/* Clear Map */
+	for( uint8_t i = 0; i < 8; i++ ){								/* Clear Map */
 		map[i] = 0xFF;
 	}
 	
-	car_row = 7;											/* Initial Car Position */ 
+	car_row = 7;													/* Initial Car Position */ 
 	car_col = 4;
+	
+	gen_state = 0;													/* Generation State */
+	
+	road_head = (uint8_t) rand() % 6;
 
-	map[0] = ( 0x07 << ( ( (uint8_t) rand() ) % 6 ) );		/* Initial road */
+	map[0] = ( 0x07 << road_head );									/* Initial road */
 }
 
 /************************************************************************
  *	GENERATE ROAD
  */
 uint8_t GenerateRoad	( void )
-{
-	uint8_t	shift = ( (uint8_t) rand() ) % 2;					/* Random Direction LEFT Or RIGHT*/
+{	
+	/* The Road head (pointer) chases a random point till they are equal.
+	   New head to chase is then generated 
+	*/
+	
+	if( gen_state == 0 ){											/* Create New Head to chase */
 		
-	if ( map[0] == 0xE0 )
-		return ( map[0] >> 1 );	
+		chase_head = (uint8_t) rand() % 6;
+		gen_state = 1;	
 			
-	else if( map[0] == 0x07 )
-		return ( map[0] << 1 );
-		 
-	else if( shift == LEFT )
-		return ( map[0] << 1 );
-	else
-		return ( map[0] >> 1 );	
+	}
+	
+	else if ( gen_state == 1 ){										/* Chase Head mode */
+		
+		if( road_head == chase_head ){
+			
+			gen_state = 0;
+			return map[0];
+		}
+		
+		if( road_head > chase_head ){
+			
+			road_head--;
+			return ( map[0] >> 1 );
+		}
+		
+		else if( road_head < chase_head ){
+			
+			road_head++;
+			return ( map[0] << 1 );
+		}
+			
+	}	
+	
+	return map[0];
 }
 
 /************************************************************************
@@ -58,11 +89,11 @@ uint8_t GenerateRoad	( void )
  */
 void MoveRoad	( uint8_t NewRoad )
 {
-	for( uint8_t i = 7; i > 0; i-- ){						/* Shift Road Down */
+	for( uint8_t i = 7; i > 0; i-- ){								/* Shift Road Down */
 		map[i] = map[i-1];
 	}
 	
-	map[0] = NewRoad;										/* Add New Road */
+	map[0] = NewRoad;												/* Add New Road */
 }
 
 /************************************************************************
@@ -71,7 +102,7 @@ void MoveRoad	( uint8_t NewRoad )
 void MoveCar	( uint8_t dir )
 {
 
-	if ( ( dir == LEFT ) && ( ( car_col + 1 ) == 8 ) ){ }	/* Boundary Conditions */
+	if ( ( dir == LEFT ) && ( ( car_col + 1 ) == 8 ) ){ }			/* Boundary Conditions */
 
 	else if ( ( dir == RIGHT ) && ( ( car_col - 1 ) == -1 ) )	{ }
 		
@@ -97,7 +128,7 @@ void MoveCar	( uint8_t dir )
  */
 uint8_t CheckCollision ( void )
 {
-	if( ( 1 << car_col ) & ( ~map[ car_row ])  )
+	if( ( 1 << car_col ) & ( ~map[ car_row ])  )					/* if Car Collides */
 		return 1;
 	else
 		return 0;
@@ -109,7 +140,7 @@ uint8_t CheckCollision ( void )
 void ShowCar( uint8_t row )
 {
 	if( row == car_row )
-		PORT_COL |= ( 1 << car_col );
+		PORT_COL |= ( 1 << car_col );								/* Car Column */
 }
 
 /************************************************************************
@@ -117,7 +148,7 @@ void ShowCar( uint8_t row )
  */
 void ShowRoad( uint8_t row )
 {
-	PORT_COL = ( ~map[row] );
+	PORT_COL = ( ~map[row] );										/* Road Column */
 }
 
 /************************************************************************
@@ -176,7 +207,7 @@ void GameOver ( void )
  */
 void ShowScroll ( void ){
 
-	for( uint8_t i = 0; i < 8; i++ ){							/* Display Sweep */
+	for( uint8_t i = 0; i < 8; i++ ){								/* Display Sweep */
     
 		PORT_ROW = ( 1<<i );
       

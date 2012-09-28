@@ -34,9 +34,12 @@
 #define RIGHT			1
 
 /* Timer - in ms */
-#define CAR_SPEED		300		
+#define CAR_SPEED		200		
 #define SWEEP_TIME		1					
 #define SCROLL_TIME		50
 #define SEL_WAIT		150
+
+/* Road Bend: 1 is most difficult */
+#define ROAD_BEND		05
 
 #endif /* ROAD_RASH_H_ */
